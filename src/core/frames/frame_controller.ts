@@ -38,8 +38,8 @@ export class FrameController implements FetchRequestDelegate, FormInterceptorDel
     this.navigateFrame(element, url)
   }
 
-  shouldInterceptFormSubmission(element: HTMLFormElement) {
-    return this.shouldInterceptNavigation(element)
+  shouldInterceptFormSubmission(element: HTMLFormElement, submitter?: HTMLElement) {
+    return this.shouldInterceptNavigation(element, submitter)
   }
 
   formSubmissionIntercepted(element: HTMLFormElement, submitter?: HTMLElement) {
@@ -104,7 +104,7 @@ export class FrameController implements FetchRequestDelegate, FormInterceptorDel
   }
 
   formSubmissionSucceededWithResponse(formSubmission: FormSubmission, response: FetchResponse) {
-    const frame = this.findFrameElement(formSubmission.formElement)
+    const frame = this.findFrameElement(formSubmission.formElement, formSubmission.submitter)
     frame.controller.loadResponse(response)
   }
 
@@ -125,8 +125,8 @@ export class FrameController implements FetchRequestDelegate, FormInterceptorDel
     frame.src = url
   }
 
-  private findFrameElement(element: Element) {
-    const id = element.getAttribute("data-turbo-frame")
+  private findFrameElement(element: Element, submitter?: HTMLElement) {
+    const id = submitter?.getAttribute("data-turbo-frame") || element.getAttribute("data-turbo-frame")
     return getFrameElementById(id) ?? this.element
   }
 
@@ -191,8 +191,8 @@ export class FrameController implements FetchRequestDelegate, FormInterceptorDel
     return false
   }
 
-  private shouldInterceptNavigation(element: Element) {
-    const id = element.getAttribute("data-turbo-frame") || this.element.getAttribute("target")
+  private shouldInterceptNavigation(element: Element, submitter?: HTMLElement) {
+    const id = submitter?.getAttribute("data-turbo-frame") || element.getAttribute("data-turbo-frame") || this.element.getAttribute("target")
 
     if (!this.enabled || id == "_top") {
       return false
@@ -225,7 +225,7 @@ export class FrameController implements FetchRequestDelegate, FormInterceptorDel
 function getFrameElementById(id: string | null) {
   if (id != null) {
     const element = document.getElementById(id)
-    if (element instanceof FrameElement) {
+    if (element instanceof FrameElement && !element.hasAttribute("disabled")) {
       return element
     }
   }
