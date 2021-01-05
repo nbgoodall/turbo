@@ -5,6 +5,12 @@
     <title>Form</title>
     <script src="/src/tests/fixtures/turbo.es2017-umd.js" data-turbo-track="reload"></script>
     <script src="/src/tests/fixtures/test.js"></script>
+    <style>
+      dialog {
+        display: block;
+        position: static;
+      }
+    </style>
   </head>
   <body>
     <div id="standard">
@@ -12,6 +18,17 @@
         <input type="submit">
       </form>
     </div>
+    <div id="reject">
+      <form class="unprocessable_entity" action="/__turbo/reject" method="post">
+        <input type="hidden" name="status" value="422">
+        <input type="submit">
+      </form>
+      <form class="internal_server_error" action="/__turbo/reject" method="post">
+        <input type="hidden" name="status" value="500">
+        <input type="submit">
+      </form>
+    </div>
+    <hr>
     <div id="submitter">
       <form action="/src/tests/fixtures/one.html" method="get">
         <button type="submit" formmethod="post" formaction="/__turbo/redirect"
@@ -19,12 +36,52 @@
       </form>
     </div>
     <hr>
+    <div id="disabled">
+      <form action="/__turbo/redirect" method="post" data-turbo="false">
+        <input type="hidden" name="path" value="/src/tests/fixtures/one.html">
+        <input type="submit">
+      </form>
+
+      <form action="/__turbo/redirect" method="post">
+        <input type="hidden" name="path" value="/src/tests/fixtures/one.html">
+        <input type="submit" data-turbo="false">
+      </form>
+    </div>
+    <hr>
+    <div id="skipped">
+      <dialog id="dialog-method" open>
+        <form method="dialog">
+          <button type="submit">Close</button>
+        </form>
+      </dialog>
+
+      <dialog id="dialog-formmethod" open>
+        <form action="/__turbo/redirect" method="post">
+          <input type="hidden" name="path" value="/src/tests/fixtures/one.html">
+          <button formmethod="dialog">Close</button>
+        </form>
+      </dialog>
+    </div>
+    <hr>
     <turbo-frame id="frame">
       <form action="/__turbo/redirect" method="post" class="redirect">
         <input type="hidden" name="path" value="/src/tests/fixtures/frames/form.html">
         <input type="submit">
       </form>
+      <form class="unprocessable_entity" action="/__turbo/reject" method="post">
+        <input type="hidden" name="status" value="422">
+        <input type="submit">
+      </form>
+      <form class="internal_server_error" action="/__turbo/reject" method="post">
+        <input type="hidden" name="status" value="500">
+        <input type="submit">
+      </form>
       <form action="/__turbo/messages" method="post" class="stream">
+        <input type="hidden" name="type" value="stream">
+        <input type="hidden" name="content" value="Hello!">
+        <input type="submit">
+      </form>
+      <form action="/__turbo/messages/1" method="put" class="stream put">
         <input type="hidden" name="type" value="stream">
         <input type="hidden" name="content" value="Hello!">
         <input type="submit">

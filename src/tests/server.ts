@@ -1,5 +1,6 @@
 import { Response, Router } from "express"
 import multer from "multer"
+import path from "path"
 
 const router = Router()
 const streamResponses: Set<Response> = new Set
@@ -11,6 +12,13 @@ router.post("/redirect", (request, response) => {
   response.redirect(303, path)
 })
 
+router.post("/reject", (request, response) => {
+  const { status } = request.body
+  const fixture = path.join(__dirname, `../../src/tests/fixtures/${status}.html`)
+
+  response.status(parseInt(status || "422", 10)).sendFile(fixture)
+})
+
 router.post("/messages", (request, response) => {
   const { content, type } = request.body
   if (typeof content == "string") {
@@ -20,6 +28,22 @@ router.post("/messages", (request, response) => {
       response.send(renderMessage(content))
     } else {
       response.sendStatus(201)
+    }
+  } else {
+    response.sendStatus(422)
+  }
+})
+
+router.put("/messages/:id", (request, response) => {
+  const { content, type } = request.body
+  const { id } = request.params
+  if (typeof content == "string") {
+    receiveMessage(content)
+    if (type == "stream") {
+      response.type("text/html; turbo-stream=*; charset=utf-8")
+      response.send(renderMessage(id + ": " + content))
+    } else {
+      response.sendStatus(200)
     }
   } else {
     response.sendStatus(422)

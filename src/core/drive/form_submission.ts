@@ -44,7 +44,7 @@ export class FormSubmission {
   }
 
   get method(): FetchMethod {
-    const method = this.submitter?.getAttribute("formmethod") || this.formElement.method
+    const method = this.submitter?.getAttribute("formmethod") || this.formElement.getAttribute("method") || ""
     return fetchMethodFromString(method.toLowerCase()) || FetchMethod.get
   }
 
@@ -99,7 +99,9 @@ export class FormSubmission {
   }
 
   requestSucceededWithResponse(request: FetchRequest, response: FetchResponse) {
-    if (this.requestMustRedirect(request) && !response.redirected) {
+    if (response.clientError || response.serverError) {
+      this.delegate.formSubmissionFailedWithResponse(this, response)
+    } else if (this.requestMustRedirect(request) && !response.redirected) {
       const error = new Error("Form responses must redirect to another location")
       this.delegate.formSubmissionErrored(this, error)
     } else {
