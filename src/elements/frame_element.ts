@@ -1,35 +1,46 @@
 import { FetchResponse } from "../http/fetch_response"
-import { FrameController } from "../core/frames/frame_controller"
+
+export enum FrameLoadingStyle { eager = "eager", lazy = "lazy" }
+
+export interface FrameElementDelegate {
+  connect(): void
+  disconnect(): void
+  loadingStyleChanged(): void
+  sourceURLChanged(): void
+  formSubmissionIntercepted(element: HTMLFormElement, submitter?: HTMLElement): void
+  loadResponse(response: FetchResponse): void
+  isLoading: boolean
+}
 
 export class FrameElement extends HTMLElement {
-  readonly controller: FrameController
+  static delegateConstructor: new (element: FrameElement) => FrameElementDelegate
+
+  loaded: Promise<FetchResponse | void> = Promise.resolve()
+  readonly delegate: FrameElementDelegate
 
   static get observedAttributes() {
-    return ["src"]
+    return ["loading", "src"]
   }
 
   constructor() {
     super()
-    this.controller = new FrameController(this)
+    this.delegate = new FrameElement.delegateConstructor(this)
   }
 
   connectedCallback() {
-    this.controller.connect()
+    this.delegate.connect()
   }
 
   disconnectedCallback() {
-    this.controller.disconnect()
+    this.delegate.disconnect()
   }
 
-  attributeChangedCallback() {
-    if (this.src && this.isActive) {
-      const value = this.controller.visit(this.src)
-      Object.defineProperty(this, "loaded", { value, configurable: true })
+  attributeChangedCallback(name: string) {
+    if (name == "loading") {
+      this.delegate.loadingStyleChanged()
+    } else if (name == "src") {
+      this.delegate.sourceURLChanged()
     }
-  }
-
-  formSubmissionIntercepted(element: HTMLFormElement, submitter?: HTMLElement) {
-    this.controller.formSubmissionIntercepted(element, submitter)
   }
 
   get src() {
@@ -44,8 +55,16 @@ export class FrameElement extends HTMLElement {
     }
   }
 
-  get loaded(): Promise<FetchResponse | undefined> {
-    return Promise.resolve(undefined)
+  get loading(): FrameLoadingStyle {
+    return frameLoadingStyleFromString(this.getAttribute("loading") || "")
+  }
+
+  set loading(value: FrameLoadingStyle) {
+    if (value) {
+      this.setAttribute("loading", value)
+    } else {
+      this.removeAttribute("loading")
+    }
   }
 
   get disabled() {
@@ -72,6 +91,10 @@ export class FrameElement extends HTMLElement {
     }
   }
 
+  get complete() {
+    return !this.delegate.isLoading
+  }
+
   get isActive() {
     return this.ownerDocument === document && !this.isPreview
   }
@@ -81,4 +104,9 @@ export class FrameElement extends HTMLElement {
   }
 }
 
-customElements.define("turbo-frame", FrameElement)
+function frameLoadingStyleFromString(style: string) {
+  switch (style.toLowerCase()) {
+    case "lazy":  return FrameLoadingStyle.lazy
+    default:      return FrameLoadingStyle.eager
+  }
+}
